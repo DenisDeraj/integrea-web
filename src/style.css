@@ -212,3 +212,28 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
 }
+
+/* ---------- 2. kolo: pohyb ---------- */
+.hero{overflow:clip}
+.hero-pin{position:relative}
+.hero h1 .ch{display:inline-block;will-change:transform}
+.hero h1 .wd{display:inline-block;white-space:nowrap}
+.zoom-cover{position:absolute;inset:0;background:var(--g);opacity:0;pointer-events:none}
+.band{border-block:1px solid var(--line);padding:22px 0;overflow:hidden;position:relative;z-index:1}
+.band-track{display:flex;align-items:center;gap:36px;width:max-content;font-size:clamp(28px,4.4vw,64px);font-weight:700;letter-spacing:-0.03em;white-space:nowrap;will-change:transform}
+.band-track i{display:block;width:.32em;height:.32em;background:var(--o);flex:none}
+.band-track span:nth-child(4n+3){color:transparent;-webkit-text-stroke:1.5px #8A8C94}
+.cursor{position:fixed;left:0;top:0;width:14px;height:14px;background:var(--o);z-index:90;pointer-events:none;transform:translate(-100px,-100px);mix-blend-mode:normal;transition:width .25s,height .25s,margin .25s}
+.cursor.big{width:54px;height:54px;margin:-20px 0 0 -20px;background:rgba(240,88,43,.25);border:1.5px solid var(--o)}
+@media (hover:none),(pointer:coarse){.cursor{display:none}}
+.btn{will-change:transform}
+.who .big .ch{display:inline-block}
+.svc{will-change:transform}
+.form-sec{clip-path:inset(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.cursor{display:none}}
+
+.cells{position:fixed;inset:0;z-index:0;pointer-events:none}
+main,.foot,.band{position:relative;z-index:1}
+.finale{height:140vh}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.story-body p.reveal,.who-text,.lead{text-shadow:0 0 18px #17181C,0 0 6px #17181C}

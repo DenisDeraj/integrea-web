@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { initQuiz } from "./quiz";
+import { initParticles } from "./particles";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,6 +15,8 @@ const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 initQuiz();
+const cells = initParticles(reduced);
+ScrollTrigger.addEventListener("refresh", () => cells.refresh());
 
 // header border
 const top = $(".top");
@@ -32,7 +35,7 @@ if (reduced) {
   $$(".proc li").forEach((l) => l.classList.add("on"));
 } else {
   // smooth scroll
-  const lenis = new Lenis({ lerp: 0.09 });
+  const lenis = new Lenis({ duration: 1.15, easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smoothWheel: true });
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((t) => lenis.raf(t * 1000));
   gsap.ticker.lagSmoothing(0);
@@ -55,9 +58,11 @@ function motion() {
   gsap.set(".hm-right", { x: 34 });
   gsap.set(".hm-dot", { y: -62 });
 
+  const h1 = $(".hero h1");
+  h1.innerHTML = h1.textContent!.trim().split(" ").map((w) => `<span class="wd">${[...w].map((c) => `<span class="ch">${c}</span>`).join("")}</span>`).join(" ");
   const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
   intro
-    .from(".hero h1 .w", { yPercent: 60, opacity: 0, duration: 1.1, stagger: 0.07 })
+    .from(".hero h1 .ch", { yPercent: 110, rotateX: -80, opacity: 0, duration: 1.2, stagger: 0.018, transformOrigin: "50% 100%" })
     .from(".lead, .actions", { y: 24, opacity: 0, duration: 1, stagger: 0.1 }, "-=0.8")
     .from(".hm-left", { x: -160, opacity: 0, duration: 1.4 }, 0.1)
     .from(".hm-right", { x: 160, opacity: 0, duration: 1.4 }, 0.1)
@@ -71,7 +76,7 @@ function motion() {
       trigger: ".hero",
       start: "top top",
       end: "+=110%",
-      scrub: 0.6,
+      scrub: 1,
       pin: ".hero-pin",
       onEnter: () => hover.pause(),
       onLeaveBack: () => hover.play(),
@@ -119,7 +124,7 @@ function motion() {
       trigger: ".demos",
       start: "top top",
       end: "+=320%",
-      scrub: 0.7,
+      scrub: 1,
       pin: ".demos-pin",
       onUpdate: (st) => setStep(st.progress < 0.36 ? 0 : st.progress < 0.68 ? 1 : 2),
     },
@@ -214,5 +219,68 @@ function motion() {
     })
   );
 
+
+  /* ---------- PÁS: beží a zrýchľuje sa podľa scrollu ---------- */
+  const track = $(".band-track");
+  let bandX = 0, vel = 0;
+  const half = () => track.scrollWidth / 2;
+  ScrollTrigger.create({ start: 0, end: "max", onUpdate: (st) => { vel = st.getVelocity(); } });
+  gsap.ticker.add((_t, dt) => {
+    const v = 60 + Math.min(1800, Math.abs(vel)) * 0.6;
+    bandX -= ((v * dt) / 1000) * (vel < -5 ? -1 : 1);
+    const h = half();
+    if (bandX < -h) bandX += h;
+    if (bandX > 0) bandX -= h;
+    gsap.set(track, { x: bandX, skewX: gsap.utils.clamp(-12, 12, -vel / 220) });
+    vel *= 0.92;
+  });
+
+  /* ---------- KURZOR a magnetické tlačidlá ---------- */
+  if (window.matchMedia("(pointer: fine)").matches) {
+    const cur = $(".cursor");
+    const xTo = gsap.quickTo(cur, "x", { duration: 0.35, ease: "power3" });
+    const yTo = gsap.quickTo(cur, "y", { duration: 0.35, ease: "power3" });
+    window.addEventListener("pointermove", (e) => { xTo(e.clientX - 7); yTo(e.clientY - 7); });
+    $$("a, button, select, input, textarea, label.chk").forEach((el) => {
+      el.addEventListener("mouseenter", () => cur.classList.add("big"));
+      el.addEventListener("mouseleave", () => cur.classList.remove("big"));
+    });
+    $$(".btn, .nav-cta").forEach((b) => {
+      b.addEventListener("pointermove", (e: Event) => {
+        const pe = e as PointerEvent, r = b.getBoundingClientRect();
+        gsap.to(b, { x: (pe.clientX - r.left - r.width / 2) * 0.3, y: (pe.clientY - r.top - r.height / 2) * 0.4, duration: 0.4, ease: "power3.out" });
+      });
+      b.addEventListener("pointerleave", () => gsap.to(b, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.4)" }));
+    });
+    const hm = $(".hero-mark svg");
+    window.addEventListener("pointermove", (e) => {
+      const nx = e.clientX / innerWidth - 0.5, ny = e.clientY / innerHeight - 0.5;
+      gsap.to(hm, { rotateY: nx * 18, rotateX: -ny * 18, duration: 0.8, ease: "power2.out", transformPerspective: 900 });
+    });
+  }
+
+  /* ---------- NADPISY: písmená sa skladajú pri scrolle ---------- */
+  $$<HTMLElement>("main h2:not(.sr)").forEach((h) => {
+    if (h.closest(".demos") || h.closest(".services")) return;
+    h.innerHTML = h.textContent!.trim().split(" ").map((w) => `<span class="wd" style="display:inline-block;white-space:nowrap">${[...w].map((c) => `<span class="ch" style="display:inline-block">${c}</span>`).join("")}</span>`).join(" ");
+    gsap.from($$(".ch", h), {
+      yPercent: 100, opacity: 0, rotate: 8, stagger: 0.015, duration: 0.9, ease: "expo.out",
+      scrollTrigger: { trigger: h, start: "top 85%" },
+    });
+  });
+
+  /* ---------- SLUŽBY: naklonenie podľa rýchlosti ---------- */
+  ScrollTrigger.create({
+    trigger: ".services", start: "top bottom", end: "bottom top",
+    onUpdate: (st) => gsap.to(".svc", { skewX: gsap.utils.clamp(-8, 8, st.getVelocity() / -300), duration: 0.4, overwrite: true }),
+  });
+
+  /* ---------- DOTAZNÍK: biela plocha sa otvorí ako okno ---------- */
+  gsap.fromTo(".form-sec", { clipPath: "inset(12% 8% 12% 8%)" }, {
+    clipPath: "inset(0% 0% 0% 0%)", ease: "none",
+    scrollTrigger: { trigger: ".form-sec", start: "top bottom", end: "top 25%", scrub: true },
+  });
+
+  document.fonts?.ready.then(() => ScrollTrigger.refresh());
   window.addEventListener("load", () => ScrollTrigger.refresh());
 }
