@@ -208,6 +208,9 @@ export function initParticles(reduced: boolean) {
   }
   const partOff = [[0, 0], [0, 0], [0, 0]];
   const heroMarkEl = () => document.querySelector(".hero-mark") as HTMLElement | null;
+  let movedAt = -1e9;
+  // logo sa rozbije, len keď cezeň myš naozaj prechádza; ak kurzor len stojí, logo ostane celé
+  const moving = () => performance.now() - movedAt < 250;
   let brkHero = 0, brkFin = 0, idleHero = 99, idleFin = 99;
 
   const tg = [0, 0], tl = [0, 0];
@@ -228,7 +231,7 @@ export function initParticles(reduced: boolean) {
     const fromMark = inHero ? 1 - ease(clamp((heroP - 0.84) / 0.16)) : 0;
     // myš nad znakom ho rozbije na bodky, po odchode sa znova zloží
     const pad = 40;
-    const overHero = inHero && mouse.x > markRect.x - pad && mouse.x < markRect.x + markRect.w + pad && mouse.y > markRect.y - pad && mouse.y < markRect.y + markRect.h + pad;
+    const overHero = inHero && mouse.x > markRect.x - pad && mouse.x < markRect.x + markRect.w + pad && mouse.y > markRect.y - pad && mouse.y < markRect.y + markRect.h + pad && moving();
     idleHero = overHero ? 0 : idleHero + dt;
     brkHero += ((overHero || idleHero < 0.5 ? (brkHero > 0.01 || overHero ? 1 : 0) : 0) - brkHero) * Math.min(1, dt * (overHero ? 10 : 2.5));
     if (brkHero < 0.002) brkHero = 0;
@@ -242,10 +245,10 @@ export function initParticles(reduced: boolean) {
     let ldy = 0;
     if (toLogo > 0 && finEl) { const r = finEl.getBoundingClientRect(); const a = Math.max(r.top, 64), b = Math.min(r.bottom, vh()); ldy = (a + b) / 2 - H / 2; }
     const bx = logoBox.x - 30, by = logoBox.y + ldy - 30;
-    const overFin = toLogo > 0.5 && mouse.x > bx && mouse.x < bx + logoBox.w + 60 && mouse.y > by && mouse.y < by + logoBox.h + 60;
+    const overFin = toLogo > 0.5 && mouse.x > bx && mouse.x < bx + logoBox.w + 60 && mouse.y > by && mouse.y < by + logoBox.h + 60 && moving();
     idleFin = overFin ? 0 : idleFin + dt;
     brkFin += ((overFin || (idleFin < 0.6 && brkFin > 0.01) ? 1 : 0) - brkFin) * Math.min(1, dt * (overFin ? 12 : 3));
-    const want = toLogo > 0.96 && brkFin < 0.5 ? 1 : 0;
+    const want = toLogo > 0.9 && brkFin < 0.5 ? 1 : 0;
     solid += (want - solid) * Math.min(1, dt * (want ? 1.6 : 14));
     if (solid < 0.001) solid = 0;
     // logo sa drží v strede sekcie .finale, takže ho päta neprekryje a pri scrolle ide so stránkou
@@ -304,7 +307,7 @@ export function initParticles(reduced: boolean) {
   // len myš; prst na mobile by bunky odtláčal aj po zdvihnutí a rozhádzal písmená
   window.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse") { mouse.x = mouse.y = -9999; return; }
-    mouse.x = e.clientX; mouse.y = e.clientY;
+    mouse.x = e.clientX; mouse.y = e.clientY; movedAt = performance.now();
   }, { passive: true });
   document.documentElement.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
   document.fonts?.ready.then(() => { sampleShapes(); measure(); });

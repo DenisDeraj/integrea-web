@@ -54,20 +54,15 @@ function motion() {
   const mm = gsap.matchMedia();
 
   /* ---------- HERO: pri scrolle dopadne štvorec na znak ---------- */
-  gsap.set(".hm-dot", { y: -62 });
+  gsap.set(".hm-dot", { y: -80 }); // štvorec čaká vysoko nad znakom
 
   const h1 = $(".hero h1");
   h1.innerHTML = h1.textContent!.trim().split(" ").map((w) => `<span class="wd">${[...w].map((c) => `<span class="ch">${c}</span>`).join("")}</span>`).join(" ");
   const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
   intro
     .from(".hero h1 .ch", { yPercent: 110, rotateX: -80, opacity: 0, duration: 1.2, stagger: 0.018, transformOrigin: "50% 100%" })
-    .from(".lead, .actions", { y: 24, opacity: 0, duration: 1, stagger: 0.1 }, "-=0.8")
-    .from(".hm-left", { x: -160, opacity: 0, duration: 1.4 }, 0.1)
-    .from(".hm-right", { x: 160, opacity: 0, duration: 1.4 }, 0.1)
-    .from(".hm-dot", { y: -160, opacity: 0, duration: 1.2 }, 0.4);
+    .from(".lead, .actions", { y: 24, opacity: 0, duration: 1, stagger: 0.1 }, "-=0.8");
 
-  // jemné vznášanie bodky, kým sa neskroluje
-  const hover = gsap.to(".hm-dot", { y: -70, duration: 1.6, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 1.6 });
 
   const heroTl = gsap.timeline({
     scrollTrigger: {
@@ -76,14 +71,12 @@ function motion() {
       end: "+=110%",
       scrub: 1,
       pin: ".hero-pin",
-      onEnter: () => hover.pause(),
-      onLeaveBack: () => hover.play(),
-      onUpdate: (st) => { cells.hero(st.progress); st.progress > 0.01 ? hover.pause() : hover.play(); },
+      onUpdate: (st) => cells.hero(st.progress),
     },
   });
   heroTl
     // polovice znaku sú už spojené, pri scrolle iba dopadne štvorec
-    .to(".hm-dot", { y: 0, ease: "bounce.out", duration: 1.1 }, 0.1)
+    .to(".hm-dot", { y: 0, ease: "power2.in", duration: 1 }, 0.05)
     .to(".hero-text", { opacity: 0.25, y: -30, ease: "none", duration: 0.6 }, 1.25)
     .to(".hero-mark", { scale: 0.9, ease: "none", duration: 0.6 }, 1.25)
     // znak sa rozplynie do galaxie (bunky preberajú jeho tvar)
@@ -250,11 +243,6 @@ function motion() {
         gsap.to(b, { x: (pe.clientX - r.left - r.width / 2) * 0.3, y: (pe.clientY - r.top - r.height / 2) * 0.4, duration: 0.4, ease: "power3.out" });
       });
       b.addEventListener("pointerleave", () => gsap.to(b, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.4)" }));
-    });
-    const hm = $(".hero-mark svg");
-    window.addEventListener("pointermove", (e) => {
-      const nx = e.clientX / innerWidth - 0.5, ny = e.clientY / innerHeight - 0.5;
-      gsap.to(hm, { rotateY: nx * 18, rotateX: -ny * 18, duration: 0.8, ease: "power2.out", transformPerspective: 900 });
     });
   }
 
