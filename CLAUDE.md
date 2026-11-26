@@ -19,7 +19,7 @@ Vite + TypeScript (bez frameworku), GSAP + ScrollTrigger, Lenis, @fontsource/sch
 ## Pravidlá od Denisa
 - Animácie musia byť plynulé a pôsobiť profesionálne, nikdy „dosekane“: žiadne náhle prepínanie stavov, mäkké prechody, efekt len tam, kde je kurzor. Pred odovzdaním skontrolovať sekvenciu snímok (Playwright) na počítači aj mobile.
 - Logo pri načítaní vždy celé; pri scrolle iba spadne štvorec a potom sa znak rozpadne do galaxie; na konci sa galaxia zloží do plného loga.
-- Texty spisovne: správne skloňovanie, väzby a slovosled, žiadne útržkovité vety ani hovorové slová. Po každej zmene textu prejsť všetky vety.
+- Texty profesionálne a spisovne: správne skloňovanie, väzby a slovosled, celé slová bez skratiek („umelá inteligencia“, nie „AI“; bez „č.“, „napr.“), žiadne archaizmy, slang, hovorové slová ani útržkovité vety. Po každej zmene textu prejsť všetky texty (aj meta popis, dotazník, ukážky). Podrobne: OneDrive `Nová firma (AI)/Nove_prompty/PRAVIDLA_Texty_spisovne.md`.
 - Nezlomiteľné medzery po jednopísmenových predložkách (v, a, z, s, k, o, u, i) iba v texte, nie v atribútoch.
 - Žiadne reálne údaje z Enesmy, ukážky len s vymyslenou firmou Vzor s.r.o. Bez telefónu a cien. Kontakt: Instagram @integrea a e-mail.
 - `noindex` odstrániť až pri ostrom spustení na integrea.sk.
