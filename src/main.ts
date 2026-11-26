@@ -78,9 +78,8 @@ function motion() {
     // polovice znaku sú už spojené, pri scrolle iba dopadne štvorec
     .to(".hm-dot", { y: 0, ease: "power2.in", duration: 1 }, 0.05)
     .to(".hero-text", { opacity: 0.25, y: -30, ease: "none", duration: 0.6 }, 1.25)
-    .to(".hero-mark", { scale: 0.9, ease: "none", duration: 0.6 }, 1.25)
-    // znak sa rozplynie do galaxie (bunky preberajú jeho tvar)
-    .to(".hero-mark svg", { opacity: 0, ease: "power1.in", duration: 0.25 }, 1.58);
+    .to(".hero-mark", { scale: 0.9, ease: "none", duration: 0.6 }, 1.25);
+  // výbuch znaku do galaxie riadi particles.ts (v čase, po dopade štvorca)
 
   /* ---------- PRÍBEH: slová sa rozsvecujú ---------- */
   $$<HTMLElement>(".story .reveal").forEach((p) => {

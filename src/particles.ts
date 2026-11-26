@@ -27,7 +27,7 @@ export function initParticles(reduced: boolean) {
   const mobile = () => window.innerWidth < 700;
   const count = () => (mobile() ? 1500 : 3600);
   let N = 0;
-  let px: Float32Array, py: Float32Array, r1: Float32Array, r2: Float32Array, r3: Float32Array, r4: Float32Array, sz: Float32Array;
+  let px: Float32Array, py: Float32Array, fx: Float32Array, fy: Float32Array, vx: Float32Array, vy: Float32Array, r1: Float32Array, r2: Float32Array, r3: Float32Array, r4: Float32Array, sz: Float32Array;
   let col: Uint8Array;
   let markPts: Pt[] = [];
   let lastStep = 1, logoStep = 2;
@@ -43,6 +43,7 @@ export function initParticles(reduced: boolean) {
   function alloc() {
     N = count();
     px = new Float32Array(N); py = new Float32Array(N);
+    fx = new Float32Array(N); fy = new Float32Array(N); vx = new Float32Array(N); vy = new Float32Array(N);
     r1 = new Float32Array(N); r2 = new Float32Array(N); r3 = new Float32Array(N); r4 = new Float32Array(N);
     sz = new Float32Array(N); col = new Uint8Array(N);
     for (let i = 0; i < N; i++) {
@@ -259,6 +260,35 @@ export function initParticles(reduced: boolean) {
   const tg = [0, 0], tl = [0, 0];
   let last = performance.now();
   const t0 = last;
+  // výbuch znaku: 0 = znak celý (bodky skryté na ňom), 1 = výbuch a galaxia, 2 = návrat do znaku
+  // beží v čase, nie podľa scrollu, takže je plynulý pri rýchlom aj pomalom scrolle
+  let phase = 0, exT = 0, firstFrame = true;
+  const EXP = 1.7; // dĺžka výbuchu v sekundách
+  function setSvg(op: number) {
+    const s = svgEl();
+    if (!s) return;
+    s.style.transition = "opacity .16s ease";
+    s.style.opacity = String(op);
+  }
+  function explode() {
+    phase = 1; exT = 0;
+    const cx = markRect.x + markRect.w * 0.5, cy = markRect.y + markRect.h * 0.62;
+    for (let i = 0; i < N; i++) {
+      fx[i] = px[i]; fy[i] = py[i];
+      let dx = px[i] - cx, dy = py[i] - cy;
+      const d = Math.hypot(dx, dy) + 0.001;
+      dx /= d; dy /= d;
+      const a = (r2[i] - 0.5) * 1.2; // rozptyl smeru
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const sp = 260 + Math.pow(r1[i], 1.6) * 1500 + d * 2;
+      vx[i] = (dx * ca - dy * sa) * sp; vy[i] = (dx * sa + dy * ca) * sp;
+    }
+    setSvg(0);
+  }
+  function regroup() {
+    phase = 2; exT = 0;
+    for (let i = 0; i < N; i++) { fx[i] = px[i]; fy[i] = py[i]; }
+  }
   const buckets: number[][] = [[], [], [], [], [], []];
   // bodky v diere podľa priehľadnosti (4 úrovne × 6 farieb)
   const hb: number[][][] = [0, 1, 2, 3].map(() => [[], [], [], [], [], []]);
@@ -270,14 +300,20 @@ export function initParticles(reduced: boolean) {
     // scroll roztáča galaxiu
     spin += (sc - lastScroll) * 0.0009; lastScroll = sc;
 
-    // úvod: body ležia na znaku, pri konci úvodu sa rozletia do galaxie
+    // úvod: keď štvorec dopadne, znak vybuchne do galaxie; pri návrate hore sa bodky zletia späť
     const inHero = heroP < 1 && sc < H * 3;
-    if (inHero) readMark();
-    const fromMark = inHero ? 1 - ease(clamp((heroP - 0.84) / 0.16)) : 0;
-    // myš priamo na znaku vyreže dieru, bodky z nej odletia; celý znak sa rozpadne až pri scrolle
-    stepHole(hole, inHero && heroP < 0.8 && onMark(mouse.x, mouse.y), dt);
-    if (inHero) maskSvg(hole);
-    const scrollA = inHero ? clamp((heroP - 0.78) / 0.1) : 1;
+    if (phase !== 1 || exT < 0.05) readMark();
+    if (firstFrame) { firstFrame = false; if (heroP > 0.6 || !inHero) { phase = 1; exT = 99; setSvg(0); } }
+    exT += dt;
+    if (phase !== 1 && heroP > 0.6) explode();
+    else if (phase === 1 && heroP < 0.5 && inHero) regroup();
+    if (phase === 2 && exT > 0.95) { setSvg(1); if (exT > 1.15) phase = 0; }
+    const onMarkNow = phase === 0;
+    // myš priamo na znaku vyreže dieru, bodky z nej odletia
+    stepHole(hole, onMarkNow && inHero && onMark(mouse.x, mouse.y), dt);
+    maskSvg(hole);
+    const scrollA = phase === 0 ? 0 : 1;
+    const fromMark = phase === 1 ? 0 : 1;
     // koniec: galaxia sa zloží do loga
     const toLogo = ease(clamp((sc - finA) / Math.max(1, finB - finA)));
     const logoMode = toLogo > 0.55;
@@ -312,16 +348,25 @@ export function initParticles(reduced: boolean) {
     for (let i = 0; i < N; i++) {
       galaxy(i, t, tg);
       let x = tg[0], y = tg[1];
-      if (fromMark > 0 && nm) {
+      let direct = false;
+      if (phase !== 1 && nm) {
         const p = markPts[i % nm];
         const o = partOff[p.g ?? 0];
         tl[0] = markRect.x + (p.x + o[0]) * markRect.w; tl[1] = markRect.y + (p.y + o[1]) * markRect.h;
-        // každá bunka sa odlepí v trochu inom čase
-        const f = clamp(fromMark * 1.6 - r3[i] * 0.6);
-        x += (tl[0] - x) * f; y += (tl[1] - y) * f;
+        if (phase === 0) { x = tl[0]; y = tl[1]; }
+        else { // návrat: každá bodka letí po svojom, s malým oneskorením
+          const e = ease(clamp((exT - r3[i] * 0.25) / 0.65));
+          x = fx[i] + (tl[0] - fx[i]) * e; y = fy[i] + (tl[1] - fy[i]) * e; direct = true;
+        }
+      } else if (phase === 1 && exT < EXP) {
+        // výbuch: bodky letia von, brzdia a plynulo sa zaradia do galaxie
+        fx[i] += vx[i] * dt; fy[i] += vy[i] * dt;
+        const drag = Math.pow(0.04, dt); vx[i] *= drag; vy[i] *= drag;
+        const w = ease(clamp((exT - 0.12 - r4[i] * 0.2) / 1.25));
+        x = fx[i] + (x - fx[i]) * w; y = fy[i] + (y - fy[i]) * w; direct = true;
       }
       let m = 0;
-      if (fromMark > 0.5 && hole.a > 0) m = holeMix(hole, tl[0], tl[1]);
+      if (phase === 0 && hole.a > 0) m = holeMix(hole, tl[0], tl[1]);
       if (toLogo > 0 && nl) {
         const p = logoPts[i % nl];
         const f = clamp(toLogo * 1.5 - r4[i] * 0.5);
@@ -334,16 +379,16 @@ export function initParticles(reduced: boolean) {
         const tx = x - mouse.x, ty = y - mouse.y, dd = Math.sqrt(tx * tx + ty * ty) + 1, R = HOLE * 1.3;
         if (dd < R) { const q = (1 - dd / R) * 22 * m / dd; x += tx * q; y += ty * q; }
       } else if (d2 < 16900 && solid < 0.3 && fromMark < 0.5) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
-      const kk = fromMark >= 0.999 && m === 0 ? 1 : m > 0 ? kf : k * (0.7 + r3[i] * 0.6);
+      const kk = direct || (phase === 0 && m === 0) ? 1 : m > 0 ? kf : k * (0.7 + r3[i] * 0.6);
       px[i] += (x - px[i]) * kk;
       py[i] += (y - py[i]) * kk;
       let cc = col[i];
-      if (fromMark > 0.5 && nm) cc = markPts[i % nm].c;
+      const markCol = phase !== 1 || exT < 0.35 + r2[i] * 1.1;
+      if (markCol && nm) cc = markPts[i % nm].c;
       else if (logoMode && nl) cc = logoPts[i % nl].c;
       if (m > 0.02) hb[Math.min(3, Math.floor(m * 4))][cc].push(i);
       else if (scrollA > 0.01 && (solid < 0.999)) buckets[cc].push(i);
     }
-    const shape = fromMark > 0.5 || logoMode;
     const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid)], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
     for (const [set, base] of sets) {
       for (let c = 0; c < 6; c++) {
@@ -352,7 +397,9 @@ export function initParticles(reduced: boolean) {
         ctx.fillStyle = COLORS[c];
         ctx.globalAlpha = base * (c === 3 ? 0.85 : c >= 4 ? 0.95 : 0.75);
         for (let j = 0; j < b.length; j++) {
-          const i = b[j], s = shape ? Math.max(1.8, Math.min(2.6, sz[i])) : sz[i];
+          const i = b[j];
+          const small = logoMode || phase !== 1 || exT < 0.35 + r2[i] * 1.1;
+          const s = small ? Math.max(1.8, Math.min(2.6, sz[i])) : sz[i];
           ctx.fillRect(px[i] - s / 2, py[i] - s / 2, s, s);
         }
       }
