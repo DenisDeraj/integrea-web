@@ -25,7 +25,7 @@ export function initParticles(reduced: boolean) {
   const ctx = cv.getContext("2d")!;
   let W = 0, H = 0, dpr = 1;
   const mobile = () => window.innerWidth < 700;
-  const count = () => (mobile() ? 1800 : 3600);
+  const count = () => (mobile() ? 1500 : 3600);
   let N = 0;
   let px: Float32Array, py: Float32Array, r1: Float32Array, r2: Float32Array, r3: Float32Array, r4: Float32Array, sz: Float32Array;
   let col: Uint8Array;
@@ -60,12 +60,9 @@ export function initParticles(reduced: boolean) {
     const c = off.getContext("2d", { willReadFrequently: true })!;
     draw(c);
     const data = c.getImageData(0, 0, w, h).data;
-    let step = 1;
-    for (let s = 1; s < 24; s++) {
-      let n = 0;
-      for (let y = 0; y < h; y += s) for (let x = 0; x < w; x += s) if (data[(y * w + x) * 4 + 3] > 128) n++;
-      step = s; if (n <= target) break;
-    }
+    let filled = 0;
+    for (let k = 3; k < data.length; k += 16) if (data[k] > 128) filled++;
+    let step = Math.max(1, Math.ceil(Math.sqrt((filled * 4) / target)));
     lastStep = step;
     const pts: Pt[] = [];
     for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
@@ -91,10 +88,16 @@ export function initParticles(reduced: boolean) {
       const wide = Math.max(...lines.map((l) => c.measureText(l).width));
       let fs = (100 * W * (two ? 0.84 : 0.7)) / wide;
       fs = Math.min(fs, H * (two ? 0.2 : 0.22));
-      const lh = fs * 1.02;
-      const markS = (fs * (two ? 1.5 : 1.7)) / 84; // výška znaku ~ 1,7 riadku
-      const markH = 84 * markS, gap = fs * 0.35;
-      const total = markH + gap + lines.length * lh;
+      let lh = fs * 1.02;
+      let markS = (fs * (two ? 1.5 : 1.7)) / 84; // výška znaku ~ 1,7 riadku
+      let markH = 84 * markS, gap = fs * 0.35;
+      let total = markH + gap + lines.length * lh;
+      // celé logo sa musí vojsť do viditeľnej časti sekcie nad pätou
+      const lim = window.innerHeight * (two ? 0.46 : 0.5);
+      if (total > lim) {
+        const q = lim / total;
+        fs *= q; lh *= q; markS *= q; markH *= q; gap *= q; total = lim;
+      }
       let y = H / 2 - total / 2;
       drawMark(c, W / 2 - 50 * markS, y - 8 * markS, markS, "#fff");
       y += markH + gap;
@@ -110,19 +113,28 @@ export function initParticles(reduced: boolean) {
     logoStep = lastStep;
   }
 
+  let finEl: HTMLElement | null = null;
+  const vh = () => window.innerHeight;
   function measure() {
     const f = document.querySelector(".finale") as HTMLElement | null;
+    finEl = f;
     if (!f) return;
     const top = f.getBoundingClientRect().top + window.scrollY;
-    const max = document.documentElement.scrollHeight - H;
-    finA = top - H * 0.9;
-    finB = Math.min(max, top + f.offsetHeight / 2 - H / 2);
-    if (finB - finA < H * 0.4) finA = finB - H * 0.4;
+    const v = vh();
+    const max = document.documentElement.scrollHeight - v;
+    finA = top - v * 0.9;
+    finB = max;
+    if (finB - finA < v * 0.4) finA = finB - v * 0.4;
   }
 
+  let lastW = -1;
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth; H = window.innerHeight;
+    // na mobile sa pri scrolle mení výška (lišta prehliadača) – vtedy nič neprepočítavaj,
+    // inak by sa celé logo znova vzorkovalo a stránka by sa sekala
+    if (window.innerWidth === lastW && H > 0) return;
+    lastW = window.innerWidth;
+    dpr = Math.min(window.devicePixelRatio || 1, mobile() ? 1.5 : 2);
+    W = window.innerWidth; H = mobile() ? Math.max(window.innerHeight, screen.height) : window.innerHeight;
     cv.width = W * dpr; cv.height = H * dpr;
     cv.style.width = W + "px"; cv.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -189,6 +201,9 @@ export function initParticles(reduced: boolean) {
     // koniec: galaxia sa zloží do loga
     const toLogo = ease(clamp((sc - finA) / Math.max(1, finB - finA)));
     const logoMode = toLogo > 0.55;
+    // logo sa drží v strede sekcie .finale, takže ho päta neprekryje a pri scrolle ide so stránkou
+    let ldy = 0;
+    if (toLogo > 0 && finEl) { const r = finEl.getBoundingClientRect(); const a = Math.max(r.top, 64), b = Math.min(r.bottom, vh()); ldy = (a + b) / 2 - H / 2; }
 
     ctx.clearRect(0, 0, W, H);
     for (const b of buckets) b.length = 0;
@@ -208,7 +223,7 @@ export function initParticles(reduced: boolean) {
       if (toLogo > 0 && nl) {
         const p = logoPts[i % nl];
         const f = clamp(toLogo * 1.5 - r4[i] * 0.5);
-        const jx = p.x + Math.sin(t * 1.4 + i) * 0.6, jy = p.y + Math.cos(t * 1.2 + i) * 0.6;
+        const jx = p.x + Math.sin(t * 1.4 + i) * 0.6, jy = p.y + ldy + Math.cos(t * 1.2 + i) * 0.6;
         x += (jx - x) * f; y += (jy - y) * f;
       }
       const dx = px[i] - mouse.x, dy = py[i] - mouse.y, d2 = dx * dx + dy * dy;
@@ -239,7 +254,11 @@ export function initParticles(reduced: boolean) {
   let raf = 0;
   resize();
   window.addEventListener("resize", resize);
-  window.addEventListener("pointermove", (e) => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
+  // len myš; prst na mobile by bunky odtláčal aj po zdvihnutí a rozhádzal písmená
+  window.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") { mouse.x = mouse.y = -9999; return; }
+    mouse.x = e.clientX; mouse.y = e.clientY;
+  }, { passive: true });
   document.documentElement.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
   document.fonts?.ready.then(() => { sampleShapes(); measure(); });
   document.addEventListener("visibilitychange", () => {
