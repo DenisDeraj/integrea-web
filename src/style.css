@@ -124,7 +124,7 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 .svc p{color:var(--mut);margin-top:10px}
 
 /* who */
-.who{padding:20vh 0}
+.who{padding:20vh 0;overflow:hidden;overflow:clip}
 .who .big{font-size:clamp(44px,9vw,150px);max-width:none;line-height:.92;letter-spacing:-0.04em}
 .who-text{margin-top:6vh;margin-left:auto;max-width:48ch;font-size:clamp(18px,1.5vw,22px);color:#D7D8DD}
 
