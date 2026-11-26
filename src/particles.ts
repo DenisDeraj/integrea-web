@@ -92,9 +92,10 @@ export function initParticles(reduced: boolean) {
     logoStep = lastStep;
     logoAlpha = lastData;
     // ostrá verzia loga v plnom rozlíšení – bodky sa do nej na konci zlejú
-    solidCv.width = W * dpr; solidCv.height = H * dpr;
+    const sd = Math.min(window.devicePixelRatio || 1, 3); // ostré logo aj na mobile
+    solidCv.width = W * sd; solidCv.height = H * sd;
     const sc2 = solidCv.getContext("2d")!;
-    sc2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sc2.setTransform(sd, 0, 0, sd, 0, 0);
     sc2.clearRect(0, 0, W, H);
     drawLogo(sc2);
   }
