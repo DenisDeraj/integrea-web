@@ -53,9 +53,7 @@ if (reduced) {
 function motion() {
   const mm = gsap.matchMedia();
 
-  /* ---------- HERO: dve polovice sa primknú, bodka dopadne ---------- */
-  gsap.set(".hm-left", { x: -34 });
-  gsap.set(".hm-right", { x: 34 });
+  /* ---------- HERO: pri scrolle dopadne štvorec na znak ---------- */
   gsap.set(".hm-dot", { y: -62 });
 
   const h1 = $(".hero h1");
@@ -84,9 +82,8 @@ function motion() {
     },
   });
   heroTl
-    .to(".hm-left", { x: 0, ease: "power3.inOut", duration: 1 }, 0)
-    .to(".hm-right", { x: 0, ease: "power3.inOut", duration: 1 }, 0)
-    .to(".hm-dot", { y: 0, ease: "bounce.out", duration: 1 }, 0.75)
+    // polovice znaku sú už spojené, pri scrolle iba dopadne štvorec
+    .to(".hm-dot", { y: 0, ease: "bounce.out", duration: 1.1 }, 0.1)
     .to(".hero-text", { opacity: 0.25, y: -30, ease: "none", duration: 0.6 }, 1.25)
     .to(".hero-mark", { scale: 0.9, ease: "none", duration: 0.6 }, 1.25)
     // znak sa rozplynie do galaxie (bunky preberajú jeho tvar)
