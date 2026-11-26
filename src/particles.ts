@@ -212,9 +212,8 @@ export function initParticles(reduced: boolean) {
   }
   const partOff = [[0, 0], [0, 0], [0, 0]];
   let movedAt = -1e9;
-  const moving = () => performance.now() - movedAt < 250;
   // diera pod kurzorom: logo sa rozpadne len tam, kde je myš priamo na ňom
-  const HOLE = 70;
+  const HOLE = 46; // polomer mäkkej diery pod kurzorom
   const hole = { x: 0, y: 0, a: 0 }, holeF = { x: 0, y: 0, a: 0 };
   function onMark(mx: number, my: number) {
     if (!markRect.w) return false;
@@ -231,15 +230,29 @@ export function initParticles(reduced: boolean) {
     }
     return false;
   }
+  // diera plynulo nasleduje kurzor, rýchlo sa otvorí a po odchode sa hneď zacelí
   function stepHole(h: typeof hole, hit: boolean, dt: number) {
-    if (hit) { h.x = mouse.x; h.y = mouse.y; }
-    h.a += ((hit ? 1 : 0) - h.a) * Math.min(1, dt * (hit ? 12 : 2.2));
-    if (h.a < 0.01) h.a = 0;
+    if (hit) {
+      if (h.a < 0.02) { h.x = mouse.x; h.y = mouse.y; }
+      const f = Math.min(1, dt * 22); h.x += (mouse.x - h.x) * f; h.y += (mouse.y - h.y) * f;
+    }
+    h.a += ((hit ? 1 : 0) - h.a) * Math.min(1, dt * (hit ? 14 : 9));
+    if (h.a < 0.005) h.a = 0;
+  }
+  // mäkký okraj: vnútro úplne rozpadnuté, k okraju plynulý prechod do plného tvaru
+  const INNER = 0.3;
+  function holeMix(h: typeof hole, x: number, y: number) {
+    if (h.a === 0) return 0;
+    const R = HOLE * h.a, d = Math.hypot(x - h.x, y - h.y);
+    if (d >= R) return 0;
+    const u = clamp((d - R * INNER) / (R * (1 - INNER)));
+    return 1 - u * u * (3 - 2 * u);
   }
   function maskSvg(h: typeof hole) {
     const s = svgEl();
     if (!s) return;
-    const v = h.a > 0 ? `radial-gradient(circle at ${h.x - markRect.x}px ${h.y - markRect.y}px, transparent ${HOLE * h.a}px, #000 ${HOLE * h.a + 2}px)` : "";
+    const R = HOLE * h.a;
+    const v = h.a > 0 ? `radial-gradient(circle at ${(h.x - markRect.x).toFixed(1)}px ${(h.y - markRect.y).toFixed(1)}px, rgba(0,0,0,0) ${(R * INNER).toFixed(1)}px, #000 ${R.toFixed(1)}px)` : "";
     if (s.style.maskImage !== v) { s.style.maskImage = v; s.style.setProperty("-webkit-mask-image", v); }
   }
 
@@ -247,7 +260,8 @@ export function initParticles(reduced: boolean) {
   let last = performance.now();
   const t0 = last;
   const buckets: number[][] = [[], [], [], [], [], []];
-  const hb: number[][] = [[], [], [], [], [], []]; // bodky v diere – vždy viditeľné
+  // bodky v diere podľa priehľadnosti (4 úrovne × 6 farieb)
+  const hb: number[][][] = [0, 1, 2, 3].map(() => [[], [], [], [], [], []]);
 
   function frame(now: number) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -261,7 +275,7 @@ export function initParticles(reduced: boolean) {
     if (inHero) readMark();
     const fromMark = inHero ? 1 - ease(clamp((heroP - 0.84) / 0.16)) : 0;
     // myš priamo na znaku vyreže dieru, bodky z nej odletia; celý znak sa rozpadne až pri scrolle
-    stepHole(hole, inHero && heroP < 0.8 && moving() && onMark(mouse.x, mouse.y), dt);
+    stepHole(hole, inHero && heroP < 0.8 && onMark(mouse.x, mouse.y), dt);
     if (inHero) maskSvg(hole);
     const scrollA = inHero ? clamp((heroP - 0.78) / 0.1) : 1;
     // koniec: galaxia sa zloží do loga
@@ -270,7 +284,7 @@ export function initParticles(reduced: boolean) {
     // keď sú bodky na mieste, zlejú sa do plného loga
     let ldy = 0;
     if (toLogo > 0 && finEl) { const r = finEl.getBoundingClientRect(); const a = Math.max(r.top, 64), b = Math.min(r.bottom, vh()); ldy = (a + b) / 2 - H / 2; }
-    stepHole(holeF, toLogo > 0.9 && moving() && onLogo(mouse.x, mouse.y, ldy), dt);
+    stepHole(holeF, toLogo > 0.9 && onLogo(mouse.x, mouse.y, ldy), dt);
     const want = toLogo > 0.9 ? 1 : 0;
     solid += (want - solid) * Math.min(1, dt * (want ? 1.6 : 14));
     if (solid < 0.001) solid = 0;
@@ -283,14 +297,16 @@ export function initParticles(reduced: boolean) {
       ctx.drawImage(solidCv, 0, ldy, W, H);
       if (holeF.a > 0) {
         ctx.globalCompositeOperation = "destination-out"; ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(holeF.x, holeF.y, HOLE * holeF.a, 0, TAU); ctx.fill();
+        const R = HOLE * holeF.a, g = ctx.createRadialGradient(holeF.x, holeF.y, 0, holeF.x, holeF.y, R);
+        g.addColorStop(0, "#000"); g.addColorStop(INNER, "#000"); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.fillRect(holeF.x - R, holeF.y - R, R * 2, R * 2);
         ctx.globalCompositeOperation = "source-over";
       }
       ctx.globalAlpha = 1;
     }
     for (const b of buckets) b.length = 0;
-    for (const b of hb) b.length = 0;
-    const hr2 = (HOLE * hole.a) ** 2, fr2 = (HOLE * holeF.a) ** 2;
+    for (const lv of hb) for (const b of lv) b.length = 0;
+    const kf = 1 - Math.pow(0.00001, dt);
     const k = 1 - Math.pow(0.002, dt);
     const nm = markPts.length, nl = logoPts.length;
     for (let i = 0; i < N; i++) {
@@ -304,28 +320,32 @@ export function initParticles(reduced: boolean) {
         const f = clamp(fromMark * 1.6 - r3[i] * 0.6);
         x += (tl[0] - x) * f; y += (tl[1] - y) * f;
       }
-      let inH = false;
-      if (fromMark > 0.5 && hr2 > 0) { const ax = tl[0] - hole.x, ay = tl[1] - hole.y; inH = ax * ax + ay * ay < hr2; }
+      let m = 0;
+      if (fromMark > 0.5 && hole.a > 0) m = holeMix(hole, tl[0], tl[1]);
       if (toLogo > 0 && nl) {
         const p = logoPts[i % nl];
         const f = clamp(toLogo * 1.5 - r4[i] * 0.5);
         const jx = p.x + Math.sin(t * 1.4 + i) * 0.6, jy = p.y + ldy + Math.cos(t * 1.2 + i) * 0.6;
         x += (jx - x) * f; y += (jy - y) * f;
-        if (solid > 0 && fr2 > 0) { const ax = jx - holeF.x, ay = jy - holeF.y; inH = ax * ax + ay * ay < fr2; }
+        if (solid > 0 && holeF.a > 0) m = holeMix(holeF, jx, jy) * solid;
       }
       const dx = px[i] - mouse.x, dy = py[i] - mouse.y, d2 = dx * dx + dy * dy;
-      if (d2 < 16900 && (inH || (solid < 0.3 && fromMark < 0.5))) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
-      const kk = fromMark >= 0.999 && !inH ? 1 : k * (0.7 + r3[i] * 0.6);
+      if (m > 0) { // bodky v diere sa jemne rozptýlia od kurzora
+        const tx = x - mouse.x, ty = y - mouse.y, dd = Math.sqrt(tx * tx + ty * ty) + 1, R = HOLE * 1.3;
+        if (dd < R) { const q = (1 - dd / R) * 22 * m / dd; x += tx * q; y += ty * q; }
+      } else if (d2 < 16900 && solid < 0.3 && fromMark < 0.5) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
+      const kk = fromMark >= 0.999 && m === 0 ? 1 : m > 0 ? kf : k * (0.7 + r3[i] * 0.6);
       px[i] += (x - px[i]) * kk;
       py[i] += (y - py[i]) * kk;
       let cc = col[i];
       if (fromMark > 0.5 && nm) cc = markPts[i % nm].c;
       else if (logoMode && nl) cc = logoPts[i % nl].c;
-      if (inH) hb[cc].push(i);
+      if (m > 0.02) hb[Math.min(3, Math.floor(m * 4))][cc].push(i);
       else if (scrollA > 0.01 && (solid < 0.999)) buckets[cc].push(i);
     }
     const shape = fromMark > 0.5 || logoMode;
-    for (const [set, base] of [[buckets, scrollA * (1 - solid)], [hb, 1]] as [number[][], number][]) {
+    const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid)], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
+    for (const [set, base] of sets) {
       for (let c = 0; c < 6; c++) {
         const b = set[c];
         if (!b.length) continue;

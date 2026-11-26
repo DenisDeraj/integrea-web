@@ -54,7 +54,7 @@ function motion() {
   const mm = gsap.matchMedia();
 
   /* ---------- HERO: pri scrolle dopadne štvorec na znak ---------- */
-  gsap.set(".hm-dot", { y: -80 }); // štvorec čaká vysoko nad znakom
+  gsap.set(".hm-dot", { y: -66 }); // štvorec čaká vysoko nad znakom
 
   const h1 = $(".hero h1");
   h1.innerHTML = h1.textContent!.trim().split(" ").map((w) => `<span class="wd">${[...w].map((c) => `<span class="ch">${c}</span>`).join("")}</span>`).join(" ");
