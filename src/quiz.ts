@@ -1,9 +1,9 @@
 const tips: Record<string, { t: string; d: string }> = {
   faktury: { t: "Triedenie faktúr", d: "Faktúry z e-mailu sa uložia do priečinkov podľa mesiaca a dodávateľa a spárujú sa s výpisom z banky. Účtovníčka dostane každý týždeň hotový balík." },
-  dl: { t: "Dodacie listy k zákazkám", d: "AI prečíta dodávateľa a zákazku na dodacom liste a uloží ho tam, kam patrí. Nič sa nestratí v schránke." },
+  dl: { t: "Dodacie listy k zákazkám", d: "AI si na dodacom liste prečíta dodávateľa a zákazku a uloží ho tam, kam patrí. V schránke sa nič nestratí." },
   hodiny: { t: "Dochádzka a hodiny", d: "Hodiny sa zapisujú správou alebo podľa polohy a na konci mesiaca z nich vznikne výkaz pre každého pracovníka." },
   ponuky: { t: "Cenové ponuky", d: "Z vášho cenníka a krátkeho zadania vznikne návrh ponuky, ktorý len skontrolujete a pošlete." },
-  prehlad: { t: "Prehľad zákazky", d: "Materiál a hodiny sa spočítajú do prehľadu, ktorý ukáže, či zákazka zarába, ešte kým beží." },
+  prehlad: { t: "Prehľad zákazky", d: "Materiál a hodiny sa spočítajú do prehľadu, ktorý ukáže, či zákazka zarába, ešte počas jej priebehu." },
 };
 
 export function initQuiz() {
@@ -21,7 +21,7 @@ export function initQuiz() {
       `<h3>Odporúčanie pre začiatok</h3><ol>` +
       list.map((k) => `<li><b>${tips[k].t}.</b> ${tips[k].d}</li>`).join("") +
       `</ol><p>Pri vašej veľkosti firmy by sa úlohy mohli spúšťať ${freq}. ` +
-      (picked.length ? "" : "Keďže ste nevybrali oblasť, uvádzame najčastejší začiatok. ") +
+      (picked.length ? "" : "Keďže ste nevybrali žiadnu oblasť, uvádzame, čím firmy začínajú najčastejšie. ") +
       `Presný návrh pripravíme po krátkom rozhovore.</p>`;
   });
 }

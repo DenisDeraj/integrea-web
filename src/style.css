@@ -237,3 +237,6 @@ main,.foot,.band{position:relative;z-index:1}
 .finale{height:140vh}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .story-body p.reveal,.who-text,.lead{text-shadow:0 0 18px var(--g),0 0 6px var(--g)}
+/* znak v úvode: pri prechode myšou ho nahradia bodky */
+.hero-mark .hm-all{transition:opacity .25s}
+.hero-mark.broken .hm-all{opacity:0}

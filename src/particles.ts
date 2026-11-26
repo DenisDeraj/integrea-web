@@ -15,7 +15,7 @@ function drawMark(c: CanvasRenderingContext2D, x: number, y: number, s: number, 
   c.restore();
 }
 
-type Pt = { x: number; y: number; c: number };
+type Pt = { x: number; y: number; c: number; g?: number };
 
 export function initParticles(reduced: boolean) {
   const cv = document.createElement("canvas");
@@ -35,6 +35,7 @@ export function initParticles(reduced: boolean) {
   const mouse = { x: -9999, y: -9999 };
   let heroP = 0; // priebeh úvodu 0–1 (nastavuje main.ts)
   let finA = 0, finB = 1; // scroll, kde sa začne a dokončí skladanie loga
+  let solid = 0;
   let spin = 0, lastScroll = window.scrollY;
 
   function alloc() {
@@ -77,10 +78,25 @@ export function initParticles(reduced: boolean) {
     // znak v úvode: viewBox -30 -60 160 160, vzorkujeme v mierke 3
     const S = 3;
     markPts = sample(160 * S, 160 * S, (c) => drawMark(c, 30 * S, 60 * S, S, "#fff"), N * 0.9)
-      .map((p) => ({ x: p.x / (160 * S), y: p.y / (160 * S), c: p.c }));
+      .map((p) => {
+        const vx = p.x / S - 30, vy = p.y / S - 60;
+        return { x: p.x / (160 * S), y: p.y / (160 * S), c: p.c, g: vy < 25 ? 2 : vx < 50 ? 0 : 1 };
+      });
 
     // logo na konci: znak nad nápisom „Integrea Works“
-    logoPts = sample(W, H, (c) => {
+    logoPts = sample(W, H, drawLogo, N);
+    logoStep = lastStep;
+    // ostrá verzia loga v plnom rozlíšení – bodky sa do nej na konci zlejú
+    solidCv.width = W * dpr; solidCv.height = H * dpr;
+    const sc2 = solidCv.getContext("2d")!;
+    sc2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sc2.clearRect(0, 0, W, H);
+    drawLogo(sc2);
+  }
+
+  const solidCv = document.createElement("canvas");
+  let logoBox = { x: 0, y: 0, w: 0, h: 0 };
+  function drawLogo(c: CanvasRenderingContext2D) {
       const two = W < 700;
       const lines = two ? ["Integrea", "Works"] : ["Integrea Works"];
       const font = (n: number) => `700 ${n}px "Schibsted Grotesk", system-ui, sans-serif`;
@@ -99,6 +115,9 @@ export function initParticles(reduced: boolean) {
         fs *= q; lh *= q; markS *= q; markH *= q; gap *= q; total = lim;
       }
       let y = H / 2 - total / 2;
+      c.font = font(fs);
+      const tw = Math.max(...lines.map((l) => c.measureText(l).width));
+      logoBox = { x: W / 2 - tw / 2, y, w: tw, h: total };
       drawMark(c, W / 2 - 50 * markS, y - 8 * markS, markS, "#fff");
       y += markH + gap;
       c.font = font(fs); c.textBaseline = "top";
@@ -109,8 +128,6 @@ export function initParticles(reduced: boolean) {
           c.fillStyle = "#fff"; c.fillText(l.slice(1), x0 + c.measureText("I").width, yy);
         } else { c.fillStyle = "#fff"; c.fillText(l, x0, yy); }
       });
-    }, N);
-    logoStep = lastStep;
   }
 
   let finEl: HTMLElement | null = null;
@@ -179,7 +196,19 @@ export function initParticles(reduced: boolean) {
     if (!s) return;
     const r = s.getBoundingClientRect();
     markRect = { x: r.left, y: r.top, w: r.width, h: r.height };
+    // posun jednotlivých častí znaku (polovice sa v úvode zbiehajú, bodka padá)
+    const nat = [[8, 30], [56, 30], [44, 8]];
+    [".hm-left", ".hm-right", ".hm-dot"].forEach((sel, k) => {
+      const g = s.querySelector(sel);
+      if (!g) return;
+      const q = g.getBoundingClientRect();
+      partOff[k][0] = (q.left - r.left) / r.width - (nat[k][0] + 30) / 160;
+      partOff[k][1] = (q.top - r.top) / r.height - (nat[k][1] + 60) / 160;
+    });
   }
+  const partOff = [[0, 0], [0, 0], [0, 0]];
+  const heroMarkEl = () => document.querySelector(".hero-mark") as HTMLElement | null;
+  let brkHero = 0, brkFin = 0, idleHero = 99, idleFin = 99;
 
   const tg = [0, 0], tl = [0, 0];
   let last = performance.now();
@@ -197,13 +226,29 @@ export function initParticles(reduced: boolean) {
     const inHero = heroP < 1 && sc < H * 3;
     if (inHero) readMark();
     const fromMark = inHero ? 1 - ease(clamp((heroP - 0.84) / 0.16)) : 0;
-    const heroAlpha = inHero ? clamp((heroP - 0.78) / 0.1) : 1;
+    // myš nad znakom ho rozbije na bodky, po odchode sa znova zloží
+    const pad = 40;
+    const overHero = inHero && mouse.x > markRect.x - pad && mouse.x < markRect.x + markRect.w + pad && mouse.y > markRect.y - pad && mouse.y < markRect.y + markRect.h + pad;
+    idleHero = overHero ? 0 : idleHero + dt;
+    brkHero += ((overHero || idleHero < 0.5 ? (brkHero > 0.01 || overHero ? 1 : 0) : 0) - brkHero) * Math.min(1, dt * (overHero ? 10 : 2.5));
+    if (brkHero < 0.002) brkHero = 0;
+    const hm = heroMarkEl();
+    if (hm) hm.classList.toggle("broken", brkHero > 0.15);
+    const heroAlpha = inHero ? Math.max(clamp((heroP - 0.78) / 0.1), brkHero) : 1;
     // koniec: galaxia sa zloží do loga
     const toLogo = ease(clamp((sc - finA) / Math.max(1, finB - finA)));
     const logoMode = toLogo > 0.55;
-    // logo sa drží v strede sekcie .finale, takže ho päta neprekryje a pri scrolle ide so stránkou
+    // keď sú bodky na mieste, zlejú sa do plného loga
     let ldy = 0;
     if (toLogo > 0 && finEl) { const r = finEl.getBoundingClientRect(); const a = Math.max(r.top, 64), b = Math.min(r.bottom, vh()); ldy = (a + b) / 2 - H / 2; }
+    const bx = logoBox.x - 30, by = logoBox.y + ldy - 30;
+    const overFin = toLogo > 0.5 && mouse.x > bx && mouse.x < bx + logoBox.w + 60 && mouse.y > by && mouse.y < by + logoBox.h + 60;
+    idleFin = overFin ? 0 : idleFin + dt;
+    brkFin += ((overFin || (idleFin < 0.6 && brkFin > 0.01) ? 1 : 0) - brkFin) * Math.min(1, dt * (overFin ? 12 : 3));
+    const want = toLogo > 0.96 && brkFin < 0.5 ? 1 : 0;
+    solid += (want - solid) * Math.min(1, dt * (want ? 1.6 : 14));
+    if (solid < 0.001) solid = 0;
+    // logo sa drží v strede sekcie .finale, takže ho päta neprekryje a pri scrolle ide so stránkou
 
     ctx.clearRect(0, 0, W, H);
     for (const b of buckets) b.length = 0;
@@ -214,11 +259,12 @@ export function initParticles(reduced: boolean) {
       let x = tg[0], y = tg[1];
       if (fromMark > 0 && nm) {
         const p = markPts[i % nm];
-        tl[0] = markRect.x + p.x * markRect.w; tl[1] = markRect.y + p.y * markRect.h;
+        const o = partOff[p.g ?? 0];
+        tl[0] = markRect.x + (p.x + o[0]) * markRect.w; tl[1] = markRect.y + (p.y + o[1]) * markRect.h;
         // každá bunka sa odlepí v trochu inom čase
         const f = clamp(fromMark * 1.6 - r3[i] * 0.6);
         x += (tl[0] - x) * f; y += (tl[1] - y) * f;
-        if (fromMark >= 0.999) { px[i] = tl[0]; py[i] = tl[1]; }
+        if (fromMark >= 0.999 && brkHero === 0) { px[i] = tl[0]; py[i] = tl[1]; }
       }
       if (toLogo > 0 && nl) {
         const p = logoPts[i % nl];
@@ -227,8 +273,8 @@ export function initParticles(reduced: boolean) {
         x += (jx - x) * f; y += (jy - y) * f;
       }
       const dx = px[i] - mouse.x, dy = py[i] - mouse.y, d2 = dx * dx + dy * dy;
-      if (d2 < 16900) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
-      const kk = fromMark >= 0.999 ? 1 : k * (0.7 + r3[i] * 0.6);
+      if (d2 < 16900 && solid < 0.3) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
+      const kk = fromMark >= 0.999 && brkHero === 0 ? 1 : k * (0.7 + r3[i] * 0.6);
       px[i] += (x - px[i]) * kk;
       py[i] += (y - py[i]) * kk;
       let cc = col[i];
@@ -241,12 +287,13 @@ export function initParticles(reduced: boolean) {
       const b = buckets[c];
       if (!b.length) continue;
       ctx.fillStyle = COLORS[c];
-      ctx.globalAlpha = heroAlpha * (c === 3 ? 0.85 : c >= 4 ? 0.95 : 0.75);
+      ctx.globalAlpha = heroAlpha * (1 - solid) * (c === 3 ? 0.85 : c >= 4 ? 0.95 : 0.75);
       for (let j = 0; j < b.length; j++) {
         const i = b[j], s = shape ? Math.max(1.8, Math.min(2.6, sz[i])) : sz[i];
         ctx.fillRect(px[i] - s / 2, py[i] - s / 2, s, s);
       }
     }
+    if (solid > 0) { ctx.globalAlpha = Math.min(1, solid * 1.15); ctx.drawImage(solidCv, 0, ldy, W, H); }
     ctx.globalAlpha = 1;
     if (!reduced) raf = requestAnimationFrame(frame);
   }
