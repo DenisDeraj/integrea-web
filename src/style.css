@@ -47,7 +47,8 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 /* hero */
 .hero{position:relative}
 .hero-pin{min-height:100svh;display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:4vw;padding:110px var(--pad) 60px calc(var(--pad) + 28px);max-width:1440px;margin:0 auto}
-.hero h1{font-size:clamp(46px,7.4vw,124px);line-height:.95;letter-spacing:-0.035em;max-width:9ch}
+/* nadpis sa zmenší aj podľa výšky okna, aby sa text s tlačidlami zmestil na prvú obrazovku (440px = hlavička, okraje, odstavec a tlačidlá; 4.75 = päť riadkov nadpisu) */
+.hero h1{font-size:clamp(46px,min(7.4vw,(100svh - 440px) / 4.75),124px);line-height:.95;letter-spacing:-0.035em;max-width:9ch}
 .hero h1 .w{display:inline-block}
 .lead{margin-top:28px;font-size:clamp(18px,1.5vw,23px);color:#D7D8DD;max-width:34ch;line-height:1.45}
 .actions{margin-top:36px;display:flex;flex-wrap:wrap;gap:12px}
@@ -120,7 +121,7 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 .svc{width:clamp(280px,30vw,430px);padding:28px 32px 32px 0;margin-right:32px;border-top:2px solid var(--line);position:relative}
 .svc::before{content:"";position:absolute;left:0;top:-2px;height:2px;width:0;background:var(--o);transition:width .5s}
 .svc:hover::before{width:100%}
-.svc-n{display:block;font-size:clamp(54px,6vw,96px);font-weight:700;letter-spacing:-0.04em;line-height:1;color:var(--g3);-webkit-text-stroke:1px var(--dim);margin-bottom:22px}
+.svc-n{display:block;font-size:clamp(54px,6vw,96px);font-weight:700;letter-spacing:-0.04em;line-height:1;color:var(--w);margin-bottom:22px}
 .svc p{color:var(--mut);margin-top:10px}
 
 /* who */
@@ -183,8 +184,12 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 @media (max-width:900px){
   .rail{display:none}
   .top nav a:not(.nav-cta){display:none}
-  .hero-pin{grid-template-columns:1fr;padding:96px var(--pad) 40px;gap:20px}
-  .hero-mark{order:-1;width:min(56vw,260px);margin:0 auto}
+  .hero-pin{grid-template-columns:1fr;padding:88px var(--pad) 28px;gap:16px}
+  /* znak dostane len miesto, ktoré na displeji zostane po texte a tlačidlách (580px) */
+  .hero-mark{order:-1;width:clamp(96px,100svh - 580px,min(56vw,260px));margin:0 auto}
+  .hero h1{font-size:clamp(38px,min(11.8vw,6.6svh),64px)}
+  .lead{margin-top:20px}
+  .actions{margin-top:24px}
   .hero-caption{display:none}
   .story .wrap,.form-grid{grid-template-columns:1fr}
   .story h2{position:static;margin-bottom:28px}
@@ -205,6 +210,7 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
   .foot{flex-direction:column;align-items:flex-start}
 }
 @media (max-width:520px){
+  .actions .btn{padding:14px;font-size:16px}
   .proc{grid-template-columns:1fr}
   .demos h2{font-size:34px}
   .demos-note{display:none}
