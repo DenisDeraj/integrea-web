@@ -3,7 +3,7 @@
 // stránky sa celá zloží do loga Integrea Works.
 const O = "#F0582B";
 // 0–2 sivé, 3 biela, 4 oranžová, 5 čierna
-const COLORS = ["#5A5C66", "#7E808A", "#B4B6BE", "#FFFFFF", O, "#0B0C0F"];
+const COLORS = ["#4A4C55", "#6E7079", "#A4A6AE", "#FFFFFF", O, "#2C2E36"]; // na čiernom pozadí: „tmavé“ bodky sú grafitové
 
 // tvar znaku v súradniciach viewBoxu (rovnaký ako SVG v HTML)
 const MARK_LEFT = "M8,64 A34,34 0 0 1 42,30 H44 V92 H8 Z";

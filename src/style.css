@@ -1,5 +1,5 @@
 :root{
-  --o:#F0582B; --g:#24262C; --g2:#2C2E35; --g3:#373941; --line:#474951;
+  --o:#F0582B; --g:#000000; --g2:#111114; --g3:#1C1D22; --line:#2E3038;
   --w:#FFFFFF; --mut:#A4A6AE; --dim:#5D5F68;
   --f:"Schibsted Grotesk", system-ui, sans-serif;
   --pad:clamp(16px,4vw,56px);
