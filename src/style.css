@@ -1,5 +1,5 @@
 :root{
-  --o:#F0582B; --g:#17181C; --g2:#202127; --g3:#2C2D34; --line:#3A3B43;
+  --o:#F0582B; --g:#24262C; --g2:#2C2E35; --g3:#373941; --line:#474951;
   --w:#FFFFFF; --mut:#A4A6AE; --dim:#5D5F68;
   --f:"Schibsted Grotesk", system-ui, sans-serif;
   --pad:clamp(16px,4vw,56px);
@@ -236,4 +236,4 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 main,.foot,.band{position:relative;z-index:1}
 .finale{height:140vh}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.story-body p.reveal,.who-text,.lead{text-shadow:0 0 18px #17181C,0 0 6px #17181C}
+.story-body p.reveal,.who-text,.lead{text-shadow:0 0 18px var(--g),0 0 6px var(--g)}
