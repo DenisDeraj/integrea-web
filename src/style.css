@@ -1,6 +1,6 @@
 :root{
   --o:#F0582B; --g:#000000; --g2:#111114; --g3:#1C1D22; --line:#2E3038;
-  --w:#FFFFFF; --mut:#A4A6AE; --dim:#5D5F68;
+  --w:#FFFFFF; --mut:#BDBFC7; --dim:#8A8C94;
   --f:"Schibsted Grotesk", system-ui, sans-serif;
   --pad:clamp(16px,4vw,56px);
 }
@@ -244,8 +244,29 @@ main,.foot,.band{position:relative;z-index:1}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .story-body p.reveal,.who-text,.lead{text-shadow:0 0 18px var(--g),0 0 6px var(--g)}
 /* znak v úvode: pri prechode myšou ho nahradia bodky */
-.hero-mark .hm-all{transition:opacity .25s}
-.hero-mark.broken .hm-all{opacity:0}
 .insta-handle{display:inline-flex;align-items:center;gap:.18em}
 .insta-handle .ig{width:.82em;height:.82em;flex:none;transition:transform .5s cubic-bezier(.16,1,.3,1),color .3s}
 .insta-handle:hover .ig{transform:rotate(-8deg) scale(1.06);color:var(--o)}
+
+/* ---------- čitateľnosť nad galaxiou ---------- */
+/* tmavý obrys okolo písmen: bodky galaxie za textom nezlievajú tvar písma */
+p,li,.step h3,.svc h3,.proc h3,.muted,.sum-note,.demos-note,.hero-caption,.story-body .word,.rail-label,.top nav a{
+  text-shadow:0 0 2px #000,0 0 6px #000,0 0 14px #000,0 0 24px rgba(0,0,0,.85)}
+.screen p,.screen li,.screen .muted,.screen .sum-note{text-shadow:none}
+@media (max-width:900px){
+  body{line-height:1.6}
+  section{scroll-margin-top:80px}
+  .story-body p{margin-bottom:1.25em}
+  .step{padding:14px 0}
+  .step h3{line-height:1.25}
+  .step p{margin-top:8px;line-height:1.55}
+  .svc{margin:0 0 28px}
+  .svc p{line-height:1.6;margin-top:12px}
+  .proc{row-gap:48px}
+  .proc p{line-height:1.6}
+  .who-text,.lead{line-height:1.6}
+}
+@media (prefers-reduced-motion:reduce){.story-body .word{color:var(--w)}}
+/* biela plocha dotazníka: bez tmavého obrysu, šedá tmavšia kvôli kontrastu */
+.form-sec p,.form-sec li,.form-sec .muted{text-shadow:none}
+.form-sec .muted,.form-sec .sum-note{color:#55575F}

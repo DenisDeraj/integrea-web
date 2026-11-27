@@ -24,15 +24,19 @@ export function initParticles(reduced: boolean) {
   document.body.prepend(cv);
   const ctx = cv.getContext("2d")!;
   let W = 0, H = 0, dpr = 1;
-  const mobile = () => window.innerWidth < 700;
-  const count = () => (mobile() ? 1500 : 3600);
+  // šírka sa číta len pri zmene veľkosti okna (čítanie počas snímky vynúti prepočet rozloženia)
+  let isMob = window.innerWidth < 700;
+  window.addEventListener("resize", () => (isMob = window.innerWidth < 700));
+  const mobile = () => isMob;
+  const count = () => (mobile() ? 1100 : 3600);
   let N = 0;
   let px: Float32Array, py: Float32Array, fx: Float32Array, fy: Float32Array, vx: Float32Array, vy: Float32Array, r1: Float32Array, r2: Float32Array, r3: Float32Array, r4: Float32Array, sz: Float32Array;
   let col: Uint8Array;
   let markPts: Pt[] = [];
-  let lastStep = 1, logoStep = 2;
   let lastData: Uint8ClampedArray = new Uint8ClampedArray(0), lastDW = 1;
-  let logoAlpha: Uint8ClampedArray = new Uint8ClampedArray(0); // znak v jednotkových súradniciach viewBoxu
+  let logoAlpha: Uint8ClampedArray = new Uint8ClampedArray(0); // priehľadnosť loga na konci (test kurzora)
+  let logoW = 1;
+  const LS = 0.5; // logo na konci sa vzorkuje v polovičnom rozlíšení (4× menej práce)
   let logoPts: Pt[] = []; // logo na konci v pixeloch obrazovky
   const mouse = { x: -9999, y: -9999 };
   let heroP = 0; // priebeh úvodu 0–1 (nastavuje main.ts)
@@ -68,7 +72,6 @@ export function initParticles(reduced: boolean) {
     let filled = 0;
     for (let k = 3; k < data.length; k += 16) if (data[k] > 128) filled++;
     let step = Math.max(1, Math.ceil(Math.sqrt((filled * 4) / target)));
-    lastStep = step;
     const pts: Pt[] = [];
     for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
       const k = (y * w + x) * 4;
@@ -78,7 +81,9 @@ export function initParticles(reduced: boolean) {
     return pts;
   }
 
-  function sampleShapes() {
+  // znak v úvode je malý, vzorkuje sa hneď; logo na konci až keď je prehliadač voľný,
+  // aby načítanie stránky nebrzdilo
+  function sampleMark() {
     // znak v úvode: viewBox -30 -60 160 160, vzorkujeme v mierke 3
     const S = 3;
     markPts = sample(160 * S, 160 * S, (c) => drawMark(c, 30 * S, 60 * S, S, "#fff"), N * 0.9)
@@ -87,10 +92,18 @@ export function initParticles(reduced: boolean) {
         return { x: p.x / (160 * S), y: p.y / (160 * S), c: p.c, g: vy < 25 ? 2 : vx < 50 ? 0 : 1 };
       });
 
+  }
+  let logoTimer = 0;
+  function scheduleLogo() {
+    const ric = (window as any).requestIdleCallback as ((cb: () => void, o?: object) => number) | undefined;
+    clearTimeout(logoTimer);
+    logoTimer = window.setTimeout(() => (ric ? ric(sampleLogo, { timeout: 1500 }) : sampleLogo()), 400);
+  }
+  function sampleLogo() {
     // logo na konci: znak nad nápisom „Integrea Works“
-    logoPts = sample(W, H, drawLogo, N);
-    logoStep = lastStep;
-    logoAlpha = lastData;
+    const lw = Math.ceil(W * LS), lh = Math.ceil(H * LS);
+    logoPts = sample(lw, lh, (c) => { c.scale(LS, LS); drawLogo(c); }, N).map((p) => ({ x: p.x / LS, y: p.y / LS, c: p.c }));
+    logoAlpha = lastData; logoW = lastDW;
     // ostrá verzia loga v plnom rozlíšení – bodky sa do nej na konci zlejú
     const sd = Math.min(window.devicePixelRatio || 1, 3); // ostré logo aj na mobile
     solidCv.width = W * sd; solidCv.height = H * sd;
@@ -101,7 +114,6 @@ export function initParticles(reduced: boolean) {
   }
 
   const solidCv = document.createElement("canvas");
-  let logoBox = { x: 0, y: 0, w: 0, h: 0 };
   function drawLogo(c: CanvasRenderingContext2D) {
       const two = W < 700;
       const lines = two ? ["Integrea", "Works"] : ["Integrea Works"];
@@ -122,8 +134,6 @@ export function initParticles(reduced: boolean) {
       }
       let y = H / 2 - total / 2;
       c.font = font(fs);
-      const tw = Math.max(...lines.map((l) => c.measureText(l).width));
-      logoBox = { x: W / 2 - tw / 2, y, w: tw, h: total };
       drawMark(c, W / 2 - 50 * markS, y - 8 * markS, markS, "#fff");
       y += markH + gap;
       c.font = font(fs); c.textBaseline = "top";
@@ -162,7 +172,8 @@ export function initParticles(reduced: boolean) {
     cv.style.width = W + "px"; cv.style.height = H + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!px || px.length !== count()) alloc();
-    sampleShapes();
+    sampleMark();
+    scheduleLogo();
     measure();
   }
 
@@ -213,7 +224,6 @@ export function initParticles(reduced: boolean) {
     });
   }
   const partOff = [[0, 0], [0, 0], [0, 0]];
-  let movedAt = -1e9;
   // diera pod kurzorom: logo sa rozpadne len tam, kde je myš priamo na ňom
   const HOLE = 46; // polomer mäkkej diery pod kurzorom
   const hole = { x: 0, y: 0, a: 0 }, holeF = { x: 0, y: 0, a: 0 };
@@ -226,9 +236,9 @@ export function initParticles(reduced: boolean) {
   }
   function onLogo(mx: number, my: number, ldy: number) {
     for (const [ox, oy] of [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]]) {
-      const x = Math.round(mx + ox), y = Math.round(my - ldy + oy);
-      if (x < 0 || y < 0 || x >= W || y >= H) continue;
-      if (logoAlpha[(y * lastDW + x) * 4 + 3] > 100) return true;
+      const x = Math.round((mx + ox) * LS), y = Math.round((my - ldy + oy) * LS);
+      if (x < 0 || y < 0 || x >= logoW || y * logoW * 4 >= logoAlpha.length) continue;
+      if (logoAlpha[(y * logoW + x) * 4 + 3] > 100) return true;
     }
     return false;
   }
@@ -296,7 +306,7 @@ export function initParticles(reduced: boolean) {
 
   function frame(now: number) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    const t = (now - t0) / 1000;
+    const t = reduced ? 0 : (now - t0) / 1000;
     const sc = window.scrollY;
     // scroll roztáča galaxiu
     spin += (sc - lastScroll) * 0.0009; lastScroll = sc;
@@ -304,14 +314,21 @@ export function initParticles(reduced: boolean) {
     // úvod: keď štvorec dopadne, znak vybuchne do galaxie; pri návrate hore sa bodky zletia späť
     const inHero = heroP < 1 && sc < H * 3;
     if (phase !== 1 || exT < 0.05) readMark();
-    if (firstFrame) { firstFrame = false; if (heroP > 0.6 || !inHero) { phase = 1; exT = 99; setSvg(0); } }
-    exT += dt;
-    if (phase !== 1 && heroP > 0.6) explode();
-    else if (phase === 1 && heroP < 0.5 && inHero) regroup();
-    if (phase === 2 && exT > 0.95) { setSvg(1); if (exT > 1.15) phase = 0; }
+    if (reduced) {
+      // obmedzený pohyb: žiadny výbuch ani dobiehanie, len pokojné stavy podľa polohy na stránke
+      const ph = sc < H * 0.6 ? 0 : 1;
+      if (ph !== phase || firstFrame) { phase = ph; exT = 99; setSvg(ph === 0 ? 1 : 0); }
+      firstFrame = false;
+    } else {
+      if (firstFrame) { firstFrame = false; if (heroP > 0.6 || !inHero) { phase = 1; exT = 99; setSvg(0); } }
+      exT += dt;
+      if (phase !== 1 && heroP > 0.6) explode();
+      else if (phase === 1 && heroP < 0.5 && inHero) regroup();
+      if (phase === 2 && exT > 0.95) { setSvg(1); if (exT > 1.15) phase = 0; }
+    }
     const onMarkNow = phase === 0;
     // myš priamo na znaku vyreže dieru, bodky z nej odletia
-    stepHole(hole, onMarkNow && inHero && onMark(mouse.x, mouse.y), dt);
+    stepHole(hole, !reduced && onMarkNow && inHero && onMark(mouse.x, mouse.y), dt);
     maskSvg(hole);
     const scrollA = phase === 0 ? 0 : 1;
     const fromMark = phase === 1 ? 0 : 1;
@@ -321,9 +338,9 @@ export function initParticles(reduced: boolean) {
     // keď sú bodky na mieste, zlejú sa do plného loga
     let ldy = 0;
     if (toLogo > 0 && finEl) { const r = finEl.getBoundingClientRect(); const a = Math.max(r.top, 64), b = Math.min(r.bottom, vh()); ldy = (a + b) / 2 - H / 2; }
-    stepHole(holeF, toLogo > 0.9 && onLogo(mouse.x, mouse.y, ldy), dt);
+    stepHole(holeF, !reduced && toLogo > 0.9 && onLogo(mouse.x, mouse.y, ldy), dt);
     const want = toLogo > 0.9 ? 1 : 0;
-    solid += (want - solid) * Math.min(1, dt * (want ? 1.6 : 14));
+    solid = reduced ? want : solid + (want - solid) * Math.min(1, dt * (want ? 1.6 : 14));
     if (solid < 0.001) solid = 0;
     // logo sa drží v strede sekcie .finale, takže ho päta neprekryje a pri scrolle ide so stránkou
 
@@ -380,7 +397,7 @@ export function initParticles(reduced: boolean) {
         const tx = x - mouse.x, ty = y - mouse.y, dd = Math.sqrt(tx * tx + ty * ty) + 1, R = HOLE * 1.3;
         if (dd < R) { const q = (1 - dd / R) * 22 * m / dd; x += tx * q; y += ty * q; }
       } else if (d2 < 16900 && solid < 0.3 && fromMark < 0.5) { const q = (1 - d2 / 16900) * 46 / Math.sqrt(d2 + 1); x += dx * q; y += dy * q; }
-      const kk = direct || (phase === 0 && m === 0) ? 1 : m > 0 ? kf : k * (0.7 + r3[i] * 0.6);
+      const kk = reduced || direct || (phase === 0 && m === 0) ? 1 : m > 0 ? kf : k * (0.7 + r3[i] * 0.6);
       px[i] += (x - px[i]) * kk;
       py[i] += (y - py[i]) * kk;
       let cc = col[i];
@@ -390,7 +407,8 @@ export function initParticles(reduced: boolean) {
       if (m > 0.02) hb[Math.min(3, Math.floor(m * 4))][cc].push(i);
       else if (scrollA > 0.01 && (solid < 0.999)) buckets[cc].push(i);
     }
-    const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid)], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
+    const galA = mobile() && !logoMode ? 0.7 : 1; // na mobile je text cez celú šírku, galaxia je tlmenejšia
+    const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid) * galA], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
     for (const [set, base] of sets) {
       for (let c = 0; c < 6; c++) {
         const b = set[c];
@@ -415,15 +433,20 @@ export function initParticles(reduced: boolean) {
   // len myš; prst na mobile by bunky odtláčal aj po zdvihnutí a rozhádzal písmená
   window.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse") { mouse.x = mouse.y = -9999; return; }
-    mouse.x = e.clientX; mouse.y = e.clientY; movedAt = performance.now();
+    mouse.x = e.clientX; mouse.y = e.clientY;
   }, { passive: true });
   document.documentElement.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
-  document.fonts?.ready.then(() => { sampleShapes(); measure(); });
+  document.fonts?.ready.then(() => { scheduleLogo(); measure(); });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) cancelAnimationFrame(raf);
     else if (!reduced) { last = performance.now(); raf = requestAnimationFrame(frame); }
   });
-  if (reduced) { heroP = 1; frame(performance.now()); window.addEventListener("scroll", () => frame(performance.now()), { passive: true }); }
+  if (reduced) {
+    const draw = () => frame(performance.now());
+    draw();
+    window.addEventListener("scroll", draw, { passive: true });
+    document.fonts?.ready.then(() => setTimeout(draw, 2500)); // po navzorkovaní loga
+  }
   else raf = requestAnimationFrame(frame);
 
   return {

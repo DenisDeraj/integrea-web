@@ -256,9 +256,14 @@ function motion() {
   });
 
   /* ---------- SLUŽBY: naklonenie podľa rýchlosti ---------- */
+  const unskew = gsap.delayedCall(0.12, () => gsap.to(".svc", { skewX: 0, duration: 0.6, ease: "power3.out", overwrite: "auto" })).pause();
   ScrollTrigger.create({
     trigger: ".services", start: "top bottom", end: "bottom top",
-    onUpdate: (st) => gsap.to(".svc", { skewX: gsap.utils.clamp(-8, 8, st.getVelocity() / -300), duration: 0.4, overwrite: true }),
+    onUpdate: (st) => {
+      gsap.to(".svc", { skewX: gsap.utils.clamp(-8, 8, st.getVelocity() / -300), duration: 0.4, overwrite: "auto" });
+      // po zastavení sa karty plynulo vyrovnajú
+      unskew.restart(true);
+    },
   });
 
   /* ---------- DOTAZNÍK: biela plocha sa otvorí ako okno ---------- */
