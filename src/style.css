@@ -228,7 +228,7 @@ h3{font-size:clamp(19px,1.5vw,24px);letter-spacing:-0.01em;line-height:1.2}
 .band{border-block:1px solid var(--line);padding:22px 0;overflow:hidden;position:relative;z-index:1}
 .band-track{display:flex;align-items:center;gap:36px;width:max-content;font-size:clamp(28px,4.4vw,64px);font-weight:700;letter-spacing:-0.03em;white-space:nowrap;will-change:transform}
 .band-track i{display:block;width:.32em;height:.32em;background:var(--o);flex:none}
-.band-track span:nth-child(4n+3){color:transparent;-webkit-text-stroke:1.5px #8A8C94}
+.band-track span:nth-child(4n+3){color:transparent;-webkit-text-stroke:1.5px #FFFFFF}
 .cursor{position:fixed;left:0;top:0;width:14px;height:14px;background:var(--o);z-index:90;pointer-events:none;transform:translate(-100px,-100px);mix-blend-mode:normal;transition:width .25s,height .25s,margin .25s}
 .cursor.big{width:54px;height:54px;margin:-20px 0 0 -20px;background:rgba(240,88,43,.25);border:1.5px solid var(--o)}
 @media (hover:none),(pointer:coarse){.cursor{display:none}}
