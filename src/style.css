@@ -250,7 +250,7 @@ main,.foot,.band{position:relative;z-index:1}
 
 /* ---------- čitateľnosť nad galaxiou ---------- */
 /* tmavý obrys okolo písmen: bodky galaxie za textom nezlievajú tvar písma */
-p,li,.step h3,.svc h3,.proc h3,.muted,.sum-note,.demos-note,.hero-caption,.story-body .word,.rail-label,.top nav a{
+p,li,.step h3,.svc h3,.proc h3,.muted,.sum-note,.demos-note,.hero-caption,.story-body .word{
   text-shadow:0 0 2px #000,0 0 6px #000,0 0 14px #000,0 0 24px rgba(0,0,0,.85)}
 .screen p,.screen li,.screen .muted,.screen .sum-note{text-shadow:none}
 @media (max-width:900px){
@@ -270,3 +270,15 @@ p,li,.step h3,.svc h3,.proc h3,.muted,.sum-note,.demos-note,.hero-caption,.story
 /* biela plocha dotazníka: bez tmavého obrysu, šedá tmavšia kvôli kontrastu */
 .form-sec p,.form-sec li,.form-sec .muted{text-shadow:none}
 .form-sec .muted,.form-sec .sum-note{color:#55575F}
+
+/* ---------- veľké nadpisy: riadky ani písmená sa nedotýkajú (diakritika, j, y, g) ---------- */
+h1,h2{line-height:1.14;letter-spacing:-0.012em}
+.hero h1{line-height:1.08;letter-spacing:-0.018em;font-size:clamp(44px,min(7vw,(100svh - 440px) / 5.2),118px)}
+.who .big{line-height:1.08;letter-spacing:-0.02em}
+.insta-handle{letter-spacing:-0.025em;line-height:1.1}
+.svc-n{letter-spacing:-0.02em}
+@media (max-width:900px){
+  .hero h1{font-size:clamp(34px,min(10.6vw,5.75svh),58px);line-height:1.1}
+  h2{line-height:1.16}
+}
+.btn,.nav-cta,.btn *{text-shadow:none}

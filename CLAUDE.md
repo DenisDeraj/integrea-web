@@ -17,6 +17,7 @@ Vite + TypeScript (bez frameworku), GSAP + ScrollTrigger, Lenis, @fontsource/sch
 - `src/quiz.ts` – dotazník s odporúčaním.
 
 ## Pravidlá od Denisa
+- **Rob len to, čo je v zadaní.** Hotové a schválené veci nemeň bez Denisovho príkazu (ani „vylepšenia“ navyše, ani zmeny vzhľadu, farieb či animácií mimo zadania). Ak niečo navyše považuješ za potrebné, najskôr to navrhni a počkaj na súhlas.
 - Animácie musia byť plynulé a pôsobiť profesionálne, nikdy „dosekane“: žiadne náhle prepínanie stavov, mäkké prechody, efekt len tam, kde je kurzor. Pred odovzdaním skontrolovať sekvenciu snímok (Playwright) na počítači aj mobile.
 - Logo pri načítaní vždy celé; pri scrolle iba spadne štvorec a potom sa znak rozpadne do galaxie; na konci sa galaxia zloží do plného loga.
 - Texty profesionálne a spisovne: správne skloňovanie, väzby a slovosled, celé slová bez skratiek („umelá inteligencia“, nie „AI“; bez „č.“, „napr.“), žiadne archaizmy, slang, hovorové slová ani útržkovité vety. Po každej zmene textu prejsť všetky texty (aj meta popis, dotazník, ukážky). Podrobne: OneDrive `Nová firma (AI)/Nove_prompty/PRAVIDLA_Texty_spisovne.md`.

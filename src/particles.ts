@@ -36,7 +36,7 @@ export function initParticles(reduced: boolean) {
   let lastData: Uint8ClampedArray = new Uint8ClampedArray(0), lastDW = 1;
   let logoAlpha: Uint8ClampedArray = new Uint8ClampedArray(0); // priehľadnosť loga na konci (test kurzora)
   let logoW = 1;
-  const LS = 0.5; // logo na konci sa vzorkuje v polovičnom rozlíšení (4× menej práce)
+  const LS = 1; // logo na konci sa vzorkuje v plnom rozlíšení ako predtým
   let logoPts: Pt[] = []; // logo na konci v pixeloch obrazovky
   const mouse = { x: -9999, y: -9999 };
   let heroP = 0; // priebeh úvodu 0–1 (nastavuje main.ts)
@@ -407,8 +407,7 @@ export function initParticles(reduced: boolean) {
       if (m > 0.02) hb[Math.min(3, Math.floor(m * 4))][cc].push(i);
       else if (scrollA > 0.01 && (solid < 0.999)) buckets[cc].push(i);
     }
-    const galA = mobile() && !logoMode ? 0.7 : 1; // na mobile je text cez celú šírku, galaxia je tlmenejšia
-    const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid) * galA], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
+    const sets: [number[][], number][] = [[buckets, scrollA * (1 - solid)], ...hb.map((lv, q) => [lv, (q + 1) / 4] as [number[][], number])];
     for (const [set, base] of sets) {
       for (let c = 0; c < 6; c++) {
         const b = set[c];
